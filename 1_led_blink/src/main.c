@@ -1,33 +1,31 @@
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"           // vTaskDelay
-#include "driver/gpio.h"             // GPIO API
+#include "freertos/task.h"           
+#include "driver/gpio.h"             
 
+#define LED_GPIO GPIO_NUM_2 // Порт светодиода
 
+TaskHandle_t Blink_Handle = NULL; // Дескриптор задачи Blink
 
-#define LED_GPIO GPIO_NUM_2
+void Blink_Task(void *arg){
+    esp_rom_gpio_pad_select_gpio(LED_GPIO); // "переключение" выбранного физического контакта в режим GPIO
+    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT); // Устанавливаем направление как выход
+    
+    while(1){
+        gpio_set_level(LED_GPIO, 1);        // Устанавливаем логический уровень 1
+        vTaskDelay(pdMS_TO_TICKS(1000));    // Ждем
+        gpio_set_level(LED_GPIO, 0);        // Устанавливаем логический уровень 0
+        vTaskDelay(pdMS_TO_TICKS(1000));    // Ждем
+    }
+}
+
 
 void app_main() {
-    // 1. Cбрасываем пин к дефолту
-    gpio_reset_pin(LED_GPIO);
-    
-    // 2. Конфигурируем направление — выход
-    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
-    
-    // 3. Бесконечный цикл мигания
-    while (1) {
-        // Включаем светодиод (уровень HIGH)
-        gpio_set_level(LED_GPIO, 1);
-        // Задержка 500 мс
-        vTaskDelay(pdMS_TO_TICKS(500));
-        
-        // Выключаем светодиод (уровень LOW)
-        gpio_set_level(LED_GPIO, 0);
-        // Задержка 500 мс
-        vTaskDelay(pdMS_TO_TICKS(500));
-
-        /*
-            Мы конвертируем миллисекунды в тики при помощи макроса pdMS_TO_TICKS(500),
-            чтобы задержка была именно 500 мс.
-        */
-    }
+    xTaskCreate(
+        Blink_Task,     // указатель на функцию‑задачу
+        "BLINK",        // имя задачи (для отладки)
+        4096,           // размер стека
+        NULL,           // аргумент, передаваемый в функцию (здесь не нужен)
+        10,             // приоритет задачи
+        &Blink_Handle   // указатель, в который запишут дескриптор задачи
+    );
 }
